@@ -1,6 +1,8 @@
 "use client";
 
 import type { RefObject } from "react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import type { AssistantMessage } from "../types/assistant.types";
 import { ASSISTANT_MESSAGES_SECTION_LABEL } from "../constants/widgetPublicCopy";
 
@@ -37,7 +39,84 @@ export function MessageList({ messages, loading, scrollRef }: MessageListProps) 
                 : "rounded-bl-md border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text)]",
             ].join(" ")}
           >
-            <p className="whitespace-pre-wrap break-words">{m.content}</p>
+            {m.role === "user" ? (
+              <p className="whitespace-pre-wrap break-words">{m.content}</p>
+            ) : (
+              <ReactMarkdown
+                remarkPlugins={[remarkGfm]}
+                components={{
+                  p: ({ children }) => (
+                    <p className="mb-2 break-words last:mb-0">{children}</p>
+                  ),
+                  strong: ({ children }) => (
+                    <strong className="font-semibold">{children}</strong>
+                  ),
+                  em: ({ children }) => <em className="italic">{children}</em>,
+                  ul: ({ children }) => (
+                    <ul className="my-1.5 ml-4 list-disc space-y-0.5">{children}</ul>
+                  ),
+                  ol: ({ children }) => (
+                    <ol className="my-1.5 ml-4 list-decimal space-y-0.5">{children}</ol>
+                  ),
+                  li: ({ children }) => (
+                    <li className="break-words leading-relaxed">{children}</li>
+                  ),
+                  table: ({ children }) => (
+                    <div className="my-2 overflow-x-auto">
+                      <table className="min-w-full border-collapse text-xs">
+                        {children}
+                      </table>
+                    </div>
+                  ),
+                  th: ({ children }) => (
+                    <th className="border border-[var(--color-border)] bg-[var(--color-surface-alt)]/60 px-2 py-1 text-left font-semibold">
+                      {children}
+                    </th>
+                  ),
+                  td: ({ children }) => (
+                    <td className="border border-[var(--color-border)] px-2 py-1">
+                      {children}
+                    </td>
+                  ),
+                  code: ({ children, className }) => {
+                    const isBlock = className?.includes("language-");
+                    return isBlock ? (
+                      <code className="block overflow-x-auto rounded bg-[var(--color-surface-alt)]/60 p-2 text-xs font-mono">
+                        {children}
+                      </code>
+                    ) : (
+                      <code className="rounded bg-[var(--color-surface-alt)]/60 px-1 py-0.5 text-xs font-mono">
+                        {children}
+                      </code>
+                    );
+                  },
+                  h1: ({ children }) => (
+                    <p className="mb-1 break-words font-bold">{children}</p>
+                  ),
+                  h2: ({ children }) => (
+                    <p className="mb-1 break-words font-bold">{children}</p>
+                  ),
+                  h3: ({ children }) => (
+                    <p className="mb-1 break-words font-semibold">{children}</p>
+                  ),
+                  hr: () => (
+                    <hr className="my-2 border-[var(--color-border)]" />
+                  ),
+                  a: ({ href, children }) => (
+                    <a
+                      href={href}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="underline underline-offset-2"
+                    >
+                      {children}
+                    </a>
+                  ),
+                }}
+              >
+                {m.content}
+              </ReactMarkdown>
+            )}
           </div>
         </div>
       ))}

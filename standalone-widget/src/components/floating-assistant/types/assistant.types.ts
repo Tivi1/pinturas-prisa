@@ -11,10 +11,3 @@ export type AssistantMessage = {
 };
 
 export type AssistantView = "closed" | "open" | "minimized";
-
-export type QuickActionId =
-  | "surface"
-  | "quote"
-  | "store"
-  | "promos"
-  | "support";

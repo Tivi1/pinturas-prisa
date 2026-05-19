@@ -1,10 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { QUICK_ACTION_MOCK_REPLIES } from "../constants/assistantMessages";
 import { INITIAL_ASSISTANT_COPY } from "../constants/widgetPublicCopy";
 import { sendMessageToAssistant } from "../services/assistantApi";
-import type { AssistantMessage, AssistantView, QuickActionId } from "../types/assistant.types";
+import type { AssistantMessage, AssistantView } from "../types/assistant.types";
 
 const CONVERSATION_STORAGE_KEY = "prisa-assistant-cody-conversation-id";
 
@@ -47,6 +46,14 @@ export function useAssistantWidget() {
 
   const listRef = useRef<HTMLDivElement | null>(null);
   const conversationIdRef = useRef<string | undefined>(readStoredConversationId());
+  /** URL de la página padre leída del query param ?pageUrl= (util cuando el widget corre en dominio propio). */
+  const parentPageUrlRef = useRef<string | undefined>(
+    typeof window !== "undefined"
+      ? (new URLSearchParams(window.location.search).get("pageUrl") ?? undefined)
+      : undefined,
+  );
+  /** Acumula el texto ya streameado via onStreamDelta para detectar respuesta válida. */
+  const streamedRef = useRef<string>("");
 
   const openPanel = useCallback(() => {
     setView("open");
@@ -88,33 +95,6 @@ export function useAssistantWidget() {
     setMessages((prev) => [...prev, msg]);
   }, []);
 
-  const handleQuickAction = useCallback(
-    (id: QuickActionId) => {
-      const pack = QUICK_ACTION_MOCK_REPLIES[id];
-      if (!pack) return;
-
-      const t = Date.now();
-      const userMsg: AssistantMessage = {
-        id: newId(),
-        role: "user",
-        content: pack.userEcho,
-        createdAt: t,
-        meta: { quickActionId: id },
-      };
-      const assistantMsg: AssistantMessage = {
-        id: newId(),
-        role: "assistant",
-        content: pack.assistantReply,
-        createdAt: t + 1,
-        meta: { quickActionId: id },
-      };
-
-      setMessages((prev) => [...prev, userMsg, assistantMsg]);
-      setError(null);
-    },
-    [],
-  );
-
   const handleSendText = useCallback(async () => {
     const text = draft.trim();
     if (!text || loading) return;
@@ -139,11 +119,14 @@ export function useAssistantWidget() {
     appendMessage(userMsg);
     appendMessage(assistantShell);
     setLoading(true);
+    streamedRef.current = "";
 
     try {
       const result = await sendMessageToAssistant(text, conversationIdRef.current, {
+        pageUrl: parentPageUrlRef.current,
         onStreamDelta: (chunk) => {
           if (!chunk) return;
+          streamedRef.current += chunk;
           setMessages((prev) =>
             prev.map((m) =>
               m.id === assistantShellId
@@ -163,18 +146,25 @@ export function useAssistantWidget() {
         }
       }
 
-      const finalText = typeof result.reply === "string" ? result.reply.trim() : "";
+      const finalText =
+        (typeof result.reply === "string" ? result.reply.trim() : "") ||
+        streamedRef.current.trim();
+
       if (!finalText) {
         setMessages((prev) => prev.filter((m) => m.id !== assistantShellId));
-        setError("El agente no devolvió texto. Revisa la API o intenta de nuevo.");
+        setError("El agente no devolvio texto. Revisa la API o intenta de nuevo.");
         return;
       }
 
-      setMessages((prev) =>
-        prev.map((m) =>
-          m.id === assistantShellId ? { ...m, content: result.reply } : m,
-        ),
-      );
+      // Si result.reply tiene contenido úsalo para normalizar; si no, el bubble ya
+      // fue rellenado por onStreamDelta y no hace falta sobreescribir.
+      if (result.reply.trim()) {
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === assistantShellId ? { ...m, content: result.reply } : m,
+          ),
+        );
+      }
     } catch (e) {
       setMessages((prev) => prev.filter((m) => m.id !== assistantShellId));
       setError(e instanceof Error ? e.message : "No se pudo completar el envío.");
@@ -198,7 +188,6 @@ export function useAssistantWidget() {
     restorePanel,
     toggleFromFab,
     dismissWelcomeBubble,
-    handleQuickAction,
     handleSendText,
   };
 }

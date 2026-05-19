@@ -76,20 +76,45 @@ export async function POST(req: Request) {
   }
 
   const base = getCodyInternalApiBase();
-  const codyRes = await fetch(`${base}/chat/streaming/response`, {
+  const streamUrl = `${base}/chat/streaming/response`;
+  const streamPayload = {
+    thread_id: threadId,
+    agent_id: agentId,
+    message,
+    context: contextText,
+  };
+
+  console.log(
+    "[cody/stream] →",
+    streamUrl,
+    JSON.stringify({
+      thread_id: streamPayload.thread_id,
+      agent_id: streamPayload.agent_id,
+      message: streamPayload.message,
+      pagePath: pagePath ?? "(none)",
+      pageUrl: pageUrl ?? "(none)",
+      context_length: streamPayload.context?.length ?? 0,
+    }),
+  );
+
+  const codyRes = await fetch(streamUrl, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${session}`,
       "Content-Type": "application/json",
       Accept: "text/event-stream",
     },
-    body: JSON.stringify({
-      thread_id: threadId,
-      agent_id: agentId,
-      message,
-      context: contextText,
-    }),
+    body: JSON.stringify(streamPayload),
   });
+
+  console.log(`[cody/stream] ← HTTP ${codyRes.status} (${streamUrl})`);
+
+  if (codyRes.status === 401) {
+    return NextResponse.json(
+      { code: "NEED_BOOTSTRAP", message: "Token Cody expirado; se requiere nueva sesión." },
+      { status: 401 },
+    );
+  }
 
   if (!codyRes.ok || !codyRes.body) {
     const fallback = await codyRes.text().catch(() => "");
@@ -111,5 +136,23 @@ export async function POST(req: Request) {
   const cacheCtl = codyRes.headers.get("Cache-Control");
   if (cacheCtl) headers.set("Cache-Control", cacheCtl);
 
-  return new Response(codyRes.body, { status: codyRes.status, headers });
+  const [logStream, clientStream] = codyRes.body.tee();
+
+  void (async () => {
+    try {
+      const reader = logStream.getReader();
+      const decoder = new TextDecoder();
+      const parts: string[] = [];
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        parts.push(decoder.decode(value, { stream: true }));
+      }
+      console.log("[cody/stream] response body:\n", parts.join(""));
+    } catch (e) {
+      console.error("[cody/stream] error al leer respuesta para log:", e);
+    }
+  })();
+
+  return new Response(clientStream, { status: codyRes.status, headers });
 }

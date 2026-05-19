@@ -4,8 +4,7 @@ import type { RefObject } from "react";
 import { AssistantHeader } from "./AssistantHeader";
 import { MessageInput } from "./MessageInput";
 import { MessageList } from "./MessageList";
-import { QuickActions } from "./QuickActions";
-import type { AssistantMessage, QuickActionId } from "../types/assistant.types";
+import type { AssistantMessage } from "../types/assistant.types";
 
 type AssistantPanelProps = {
   channelLabel: string;
@@ -18,7 +17,6 @@ type AssistantPanelProps = {
   loading: boolean;
   error: string | null;
   listRef: RefObject<HTMLDivElement | null>;
-  onQuickAction: (id: QuickActionId) => void;
   onMinimize: () => void;
   onClose: () => void;
 };
@@ -34,7 +32,6 @@ export function AssistantPanel({
   loading,
   error,
   listRef,
-  onQuickAction,
   onMinimize,
   onClose,
 }: AssistantPanelProps) {
@@ -57,7 +54,6 @@ export function AssistantPanel({
         onMinimize={onMinimize}
         onClose={onClose}
       />
-      <QuickActions onSelect={onQuickAction} disabled={loading} />
       <MessageList messages={messages} loading={loading} scrollRef={listRef} />
       <MessageInput
         value={draft}

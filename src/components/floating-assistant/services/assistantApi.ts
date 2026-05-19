@@ -99,7 +99,16 @@ async function sendViaInternalBff(
     throw new Error(msg || `Error streaming Cody (${res.status})`);
   }
 
+  console.debug(
+    "[assistantApi] BFF response OK — status:",
+    res.status,
+    "| Content-Type:",
+    res.headers.get("Content-Type"),
+    "| has body:",
+    res.body !== null,
+  );
   const reply = await consumeAssistantStream(res, opts?.onStreamDelta);
+  console.debug("[assistantApi] reply length:", reply.length, "| first 200:", JSON.stringify(reply.slice(0, 200)));
   return {
     messageId: randomId(),
     reply,

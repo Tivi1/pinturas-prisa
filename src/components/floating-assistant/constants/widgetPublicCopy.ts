@@ -4,9 +4,6 @@
  * (p. ej. CODY_*) son solo servidor y no cambian estos strings.
  */
 
-import type { QuickActionDefinition } from "./assistantOptions";
-import { QUICK_ACTIONS } from "./assistantOptions";
-
 function trimmedOrFallback(value: string | undefined, fallback: string): string {
   const t = value?.trim();
   return t && t.length > 0 ? t : fallback;
@@ -54,11 +51,6 @@ export const ASSISTANT_MINIMIZED_OPEN_BUTTON = trimmedOrFallback(
   "Abrir",
 );
 
-export const ASSISTANT_QUICK_SECTION_LABEL = trimmedOrFallback(
-  process.env.NEXT_PUBLIC_ASSISTANT_QUICK_SECTION_LABEL,
-  "Opciones rápidas",
-);
-
 export const ASSISTANT_MESSAGES_SECTION_LABEL = trimmedOrFallback(
   process.env.NEXT_PUBLIC_ASSISTANT_MESSAGES_SECTION_LABEL,
   "Conversación",
@@ -73,29 +65,3 @@ export const ASSISTANT_INPUT_SCREEN_READER_LABEL = trimmedOrFallback(
   process.env.NEXT_PUBLIC_ASSISTANT_INPUT_SR_LABEL,
   "Escribe tu mensaje",
 );
-
-/** Etiquetas de acciones rápidas; opcionalmente sobreescritas por env por id. */
-export function getQuickActionsResolved(): readonly QuickActionDefinition[] {
-  const qlSurface = process.env.NEXT_PUBLIC_ASSISTANT_QUICK_SURFACE?.trim();
-  const qlQuote = process.env.NEXT_PUBLIC_ASSISTANT_QUICK_QUOTE?.trim();
-  const qlStore = process.env.NEXT_PUBLIC_ASSISTANT_QUICK_STORE?.trim();
-  const qlPromos = process.env.NEXT_PUBLIC_ASSISTANT_QUICK_PROMOS?.trim();
-  const qlSupport = process.env.NEXT_PUBLIC_ASSISTANT_QUICK_SUPPORT?.trim();
-
-  return QUICK_ACTIONS.map((action) => {
-    const override =
-      action.id === "surface"
-        ? qlSurface
-        : action.id === "quote"
-          ? qlQuote
-          : action.id === "store"
-            ? qlStore
-            : action.id === "promos"
-              ? qlPromos
-              : action.id === "support"
-                ? qlSupport
-                : undefined;
-    const label = override && override.length > 0 ? override : action.label;
-    return { ...action, label };
-  });
-}

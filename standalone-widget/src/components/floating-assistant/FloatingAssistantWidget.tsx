@@ -65,7 +65,6 @@ export function FloatingAssistantWidget() {
           loading={assistant.loading}
           error={assistant.error}
           listRef={assistant.listRef}
-          onQuickAction={assistant.handleQuickAction}
           onMinimize={assistant.minimizePanel}
           onClose={assistant.closePanel}
         />
