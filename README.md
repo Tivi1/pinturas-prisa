@@ -1,36 +1,66 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Pinturas PRISA — sitio web + asistente Cody
 
-## Getting Started
+Sitio [Next.js](https://nextjs.org) (App Router) con página de marca, categorías/productos demo y **asistente flotante** integrado con la API **Cody** vía rutas servidor (BFF).
 
-First, run the development server:
+## Requisitos
+
+- Node.js 20+ (recomendado)
+- `npm ci` o `npm install`
+
+## Desarrollo
 
 ```bash
+cp .env.example .env.local   # opcionalmente .env; no subir secretos
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Abre [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Variables de entorno
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- **Servidor Cody** (`CODY_*`): URL base (`CODY_INTERNAL_API_URL` o `CODY_API_BASE_URL`), `CODY_AGENT_ID`, credenciales de servicio (`CODY_SERVICE_*` o alias `CODY_CHAT_*`), fichas PDF (`CODY_TECHNICAL_SHEETS_URLS`), etc.
+- **Textos del widget en el navegador**: sólo vars con prefijo **`NEXT_PUBLIC_ASSISTANT_*`** (tras cambiarlas, reinicia `npm run dev`).
+- `.env*` está en `.gitignore`; el repo lleva **`.env.example`** como plantilla.
 
-## Learn More
+Documentación rápida de claves opcionales dentro de ese archivo.
 
-To learn more about Next.js, take a look at the following resources:
+## Asistente y API interna
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+| Ruta Next | Propósito |
+|-----------|-----------|
+| `POST /api/cody/bootstrap` | Login + `create-chat-session` + thread inicial + cookies httpOnly |
+| `POST /api/cody/chat/stream` | Streaming hacia Cody (necesita cookies de bootstrap) |
+| `POST /api/cody/chat` | Fallback legacy (`getCodyAccessToken`, threads/conversaciones según env) |
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+UI: `src/components/floating-assistant/` (dinámico vía `FloatingAssistantGate` en `src/app/layout.tsx`).
 
-## Deploy on Vercel
+## Proyecto mínimo solo widget
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+La carpeta **`standalone-widget/`** es un segundo `package.json` con la misma pieza UI + rutas Cody mínimas, útil como demo o base para pegar el widget en otro sitio:
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```bash
+cd standalone-widget
+cp .env.example .env.local
+npm install && npm run dev
+```
+
+## Scripts
+
+```bash
+npm run dev      # desarrollo (Turbopack)
+npm run build    # compilación producción
+npm run start    # servidor producción tras build
+npm run lint     # ESLint
+```
+
+## Estructura destacada
+
+- `src/app/` — páginas, layout, API routes Cody
+- `src/lib/cody/` — env, cookies BFF, token legacy, parsing de respuestas
+- `src/lib/assistant/` — contexto enviado al agente (fichas, página actual, catálogo local en el sitio principal)
+- `src/presentation/`, `src/domain/` — capas UI / dominio locales al sitio
+
+## Licencia y repo
+
+Este repositorio es privado/público según la configuración en GitHub. No incluyas valores reales de `.env` ni tokens en commits.
